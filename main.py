@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
+from agent import run_triage_agent
 
 app = FastAPI()
 
@@ -10,18 +12,16 @@ class TriageRequest(BaseModel):
 
 class TriageResponse(BaseModel):
     summary: str
-    confidence_score: float
+    confidence_score: int  # 0–100 integer; changed from float to match agent output
     action_items: list[str]
 
 
 @app.post("/triage", response_model=TriageResponse)
 def triage(request: TriageRequest):
-    return TriageResponse(
-        summary="Pod is crash-looping due to an unhandled exception in the application.",
-        confidence_score=0.85,
-        action_items=[
-            "Check recent deployments for breaking changes.",
-            "Review pod logs for the full stack trace.",
-            "Verify environment variables and secrets are correctly mounted.",
-        ],
-    )
+    # Delegate entirely to the LLM agent.  Any exception surfaces as a 500.
+    try:
+        result = run_triage_agent(request.error_log)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return TriageResponse(**result)
