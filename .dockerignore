@@ -1,0 +1,11 @@
+# Local virtual environment — dependencies are installed inside the image
+# via requirements.txt, so this directory should never be copied in.
+venv/
+
+# Environment file with secrets (API keys, etc.) — never bake these into
+# an image. Inject them at runtime via `docker run -e` or a secrets manager.
+.env
+
+# Compiled Python bytecode — not needed and wastes layer space.
+__pycache__/
+*.pyc
