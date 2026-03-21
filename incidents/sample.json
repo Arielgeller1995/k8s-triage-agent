@@ -1,0 +1,5 @@
+{
+  "error_log": "Pod payments-api-7d6f9b8c4-xk9rp in namespace production has been restarting repeatedly. kubectl describe shows: Back-off restarting failed container. Last exit code: 1. Logs from previous container: \nERROR [startup] Failed to connect to PostgreSQL at postgres-primary.production.svc.cluster.local:5432 after 3 attempts: FATAL: password authentication failed for user \"payments_svc\"\nERROR [startup] Aborting: required database connection could not be established\n\nEvents:\n  Warning  BackOff    2m    kubelet  Back-off restarting failed container payments-api in pod payments-api-7d6f9b8c4-xk9rp\n  Warning  Failed     4m    kubelet  Error: failed to start container: OCI runtime create failed\n  Normal   Pulled     4m    kubelet  Successfully pulled image \"registry.internal/payments-api:v2.4.1\"\n  Normal   Started    4m    kubelet  Started container payments-api\n  Warning  BackOff    6m    kubelet  Back-off restarting failed container\n\nRESTARTS: 7 in the last 15 minutes. Pod has been in CrashLoopBackOff for 12 minutes.",
+  "component": "payments-api",
+  "severity": "critical"
+}
