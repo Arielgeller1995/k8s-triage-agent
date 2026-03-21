@@ -178,21 +178,29 @@ For a small, keyword-rich runbook corpus TF-IDF is fast, lightweight, and easy t
 
 ## 5. Grounding and Fallback
 
-The prompt instructs the model to use **only** the retrieved context:
-
+The prompt instructs the model to prioritize retrieved context over its general knowledge:
 ```
-Using ONLY the context below, analyze the incident and respond with a JSON object.
-...
-Do not invent information not present in the context.
+Using the context below as your primary source, analyze the incident.
+Prefer the retrieved context over your general knowledge.
+If the context is insufficient, you may use general knowledge but 
+reflect this with a lower confidence score.
 ```
 
-If retrieval fails to find relevant content (all scores below `0.1`), the pipeline:
+The system behaves differently based on retrieval quality:
+
+**Strong retrieval (score > 0.1):**
+Claude answers primarily from your runbooks. The response is grounded, traceable, and sources are cited.
+
+**Weak retrieval (all scores < 0.1):**
+Claude supplements with its own training knowledge as fallback. The pipeline applies a hard constraint:
 
 1. **Caps confidence at `0.3`** — signals low trustworthiness to the caller
 2. **Appends a note to `summary`** — `"...Note: retrieved context has low relevance scores — the knowledge base may not cover this incident type."`
+3. **Returns empty sources** — `[]` signals the answer did not come from your runbooks
 
-This makes the degraded state explicit rather than silently returning a hallucinated answer.
+This makes the degraded state explicit. A high confidence score means the answer is traceable to a specific runbook. A low confidence score means Claude is supplementing from general knowledge — the engineer should verify before acting.
 
+In a production ops tool, false confidence is more dangerous than admitting uncertainty.
 ---
 
 ## 6. Confidence Estimation
