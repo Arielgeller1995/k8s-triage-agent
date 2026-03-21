@@ -38,6 +38,45 @@ _NORMALIZE_PROMPT = (
 )
 
 
+_NO_KB_PROMPT = (
+    "No knowledge base context available. Use your general knowledge to analyze this incident "
+    "but be clear that no internal documentation was found.\n\n"
+    "=== INCIDENT ===\n{error_log}\n=== END INCIDENT ===\n\n"
+    "Respond with ONLY a valid JSON object with these keys:\n"
+    '- "summary": concise description of the likely root cause\n'
+    '- "confidence": set this to 0.1\n'
+    '- "action_items": list of concrete remediation steps\n'
+    '- "sources": set this to []\n'
+    "Do not use markdown or prose outside the JSON."
+)
+
+
+def _parse_llm_response(raw: str) -> dict:
+    import re
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        match = re.search(r"\{[\s\S]*\}", raw)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+    return {"summary": raw, "confidence": 0.0, "action_items": [], "sources": []}
+
+
+def _run_without_kb(error_log: str, config) -> dict:
+    prompt = _NO_KB_PROMPT.format(error_log=error_log)
+    raw = config.llm_provider.complete(prompt)
+    response = _parse_llm_response(raw)
+    return {
+        "summary": response.get("summary", ""),
+        "confidence": 0.1,
+        "action_items": response.get("action_items", []),
+        "sources": [],
+    }
+
+
 def normalize_incident(raw_input: str, provider) -> str:
     prompt = f"{_NORMALIZE_PROMPT}\n\n{raw_input}"
     return provider.complete(prompt).strip()
@@ -46,6 +85,9 @@ def normalize_incident(raw_input: str, provider) -> str:
 def run_triage(error_log: str, config) -> dict:
     documents = load_documents(config.knowledge_base_path)
     chunks = chunk_documents(documents)
+
+    if not chunks:
+        return _run_without_kb(error_log, config)
 
     retriever = TFIDFRetriever()
     retriever.build_index(chunks)
@@ -70,22 +112,7 @@ def run_triage(error_log: str, config) -> dict:
     )
 
     raw = config.llm_provider.complete(prompt)
-
-    try:
-        response = json.loads(raw)
-    except json.JSONDecodeError:
-        # Attempt to extract a JSON object if the model wrapped it in prose
-        import re
-        match = re.search(r"\{[\s\S]*\}", raw)
-        if match:
-            response = json.loads(match.group())
-        else:
-            response = {
-                "summary": raw,
-                "confidence": 0.0,
-                "action_items": [],
-                "sources": [],
-            }
+    response = _parse_llm_response(raw)
 
     if weak_retrieval:
         response["confidence"] = min(response.get("confidence", 0.0), 0.3)

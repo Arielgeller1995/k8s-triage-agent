@@ -11,9 +11,13 @@ class TFIDFRetriever:
 
     def build_index(self, chunks: list[dict]) -> None:
         self._chunks = chunks
+        if not chunks:
+            return
         self._matrix = self._vectorizer.fit_transform(c["content"] for c in chunks)
 
     def retrieve(self, query: str, top_k: int = 3) -> list[dict]:
+        if not self._chunks or self._matrix is None:
+            return []
         query_vec = self._vectorizer.transform([query])
         scores = cosine_similarity(query_vec, self._matrix)[0]
         top_indices = np.argsort(scores)[::-1][:top_k]
