@@ -56,15 +56,32 @@ On-call engineers spend significant time diagnosing Kubernetes failures that mat
 │                                       JSON response     │
 └─────────────────────────────────────────────────────────┘
 
-triage/
-├── loader.py          reads .md / .txt files from disk
-├── chunker.py         splits documents into overlapping character windows
-├── retriever.py       TF-IDF index + cosine similarity search
-├── pipeline.py        orchestrates all steps; builds prompt; parses output
-└── providers/
-    ├── base.py        abstract interface: complete(prompt) -> str
-    ├── claude.py      Anthropic SDK implementation
-    └── local.py       placeholder for local / open-weight models
+k8s-triage-agent/
+├── main.py
+├── config.py
+├── triage/
+│   ├── pipeline.py
+│   ├── loader.py
+│   ├── chunker.py
+│   ├── retriever.py
+│   └── providers/
+│       ├── base.py
+│       ├── claude.py
+│       └── local.py
+├── knowledge_base/
+│   ├── crashloopbackoff.md
+│   ├── imagepullbackoff.md
+│   ├── oomkilled.md
+│   ├── probe_failures.md
+│   └── pending_pods.md
+├── incidents/
+│   └── sample.json
+├── k8s/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── secret.yaml
+├── Dockerfile
+└── requirements.txt
 ```
 
 ---
@@ -208,7 +225,7 @@ All runtime parameters are read from environment variables. No config file needs
 |---|---|---|
 | `ANTHROPIC_API_KEY` | *(required when `LLM_PROVIDER=claude`)* | Anthropic API key |
 | `LLM_PROVIDER` | `claude` | `claude` or `local` |
-| `MODEL_NAME` | `claude-opus-4-6` | Model passed to the active provider |
+| `MODEL_NAME` | `claude-sonnet-4-6` | Model passed to the active provider |
 | `KNOWLEDGE_BASE_PATH` | `knowledge_base` | Directory containing `.md` / `.txt` runbooks |
 | `TOP_K` | `3` | Number of chunks to retrieve per query |
 | `CHUNK_SIZE` | `500` | Max characters per chunk |
@@ -225,7 +242,7 @@ Or create a `.env` file and load it:
 # .env
 ANTHROPIC_API_KEY=sk-ant-...
 LLM_PROVIDER=claude
-MODEL_NAME=claude-opus-4-6
+MODEL_NAME=claude-sonnet-4-6
 TOP_K=5
 ```
 
@@ -417,7 +434,7 @@ kubectl logs -l app=k8s-triage-agent --tail=50
 ### Forward and test
 
 ```bash
-kubectl port-forward svc/k8s-triage-agent 8000:80
+kubectl port-forward svc/k8s-triage-agent 8000:8000
 curl -s http://localhost:8000/health
 ```
 

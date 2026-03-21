@@ -23,7 +23,7 @@ def load_config() -> Config:
     return Config(
         knowledge_base_path=os.getenv("KNOWLEDGE_BASE_PATH", "knowledge_base"),
         llm_provider=os.getenv("LLM_PROVIDER", "claude"),
-        model_name=os.getenv("MODEL_NAME", "claude-sonnet-4-20250514"),
+        model_name=os.getenv("MODEL_NAME", "claude-sonnet-4-6"),
         top_k=int(os.getenv("TOP_K", "3")),
         chunk_size=int(os.getenv("CHUNK_SIZE", "500")),
     )
