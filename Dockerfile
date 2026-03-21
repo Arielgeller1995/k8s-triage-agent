@@ -18,7 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application source files into the container.
 # This happens after pip install so that code changes don't bust the
 # cached dependency layer above.
-COPY main.py agent.py ./
+COPY main.py config.py ./
+COPY triage/ ./triage/
+COPY knowledge_base/ ./knowledge_base/
 
 # Tell Docker (and humans) that the container listens on port 8000.
 # This is documentation — it does not actually publish the port; that

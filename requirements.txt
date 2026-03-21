@@ -2,3 +2,5 @@ fastapi
 uvicorn
 anthropic
 tavily-python
+numpy
+scikit-learn
