@@ -24,7 +24,7 @@ incident-triage-agent accepts any error log or incident description and returns 
 
 **Required:**
 - Python 3.11+
-- An [Anthropic API key](https://console.anthropic.com/) (or set `LLM_PROVIDER=local` to skip). 
+- An [Anthropic API key](https://console.anthropic.com/) (or set `LLM_PROVIDER=local` to skip)
 
 **Required for Kubernetes deployment:**
 - Docker
@@ -34,18 +34,113 @@ incident-triage-agent accepts any error log or incident description and returns 
 
 ## Quick Start
 
+### Option A — Run Locally (fastest)
+
 ```bash
-git clone <repo-url>
+git clone https://github.com/Arielgeller1995/incident-triage-agent
 cd incident-triage-agent
 
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-export ANTHROPIC_API_KEY=<your_key>
+export ANTHROPIC_API_KEY=your-key-here
 uvicorn main:app --reload --port 8000
 ```
 
-Once running, visit http://localhost:8000/docs for the interactive Swagger UI.
+Visit http://localhost:8000/docs for the interactive Swagger UI.
+
+### Option B — Run on Kubernetes (production-like)
+
+```bash
+git clone https://github.com/Arielgeller1995/incident-triage-agent
+cd incident-triage-agent
+
+# Build and load image
+docker build -t incident-triage-agent:latest .
+kind load docker-image incident-triage-agent:latest
+
+# Create secret and deploy
+kubectl create secret generic anthropic-secret \
+  --from-literal=api-key=your-key-here
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+
+# Verify and forward
+kubectl get pods -l app=incident-triage-agent
+kubectl port-forward svc/incident-triage-agent 8000:8000
+```
+
+Visit http://localhost:8000/docs for the interactive Swagger UI.
+
+---
+
+## How to Build
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/Arielgeller1995/incident-triage-agent
+cd incident-triage-agent
+
+# 2. Create a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Set the API key
+export ANTHROPIC_API_KEY=your-key-here
+
+# 5. Run locally
+uvicorn main:app --reload --port 8000
+```
+
+The service is now running at http://localhost:8000.
+
+---
+
+## How to Deploy on Kubernetes
+
+```bash
+# 1. Build the Docker image
+docker build -t incident-triage-agent:latest .
+
+# 2. Load into kind (local dev cluster)
+kind load docker-image incident-triage-agent:latest
+
+# 3. Create the API key secret
+kubectl create secret generic anthropic-secret \
+  --from-literal=api-key=your-key-here
+
+# 4. Apply manifests
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+
+# 5. Verify the pod is running
+kubectl get pods -l app=incident-triage-agent
+kubectl logs -l app=incident-triage-agent --tail=50
+```
+
+---
+
+## How to Run the App Once Deployed
+
+```bash
+# 1. Port-forward the service
+kubectl port-forward svc/incident-triage-agent 8000:8000
+
+# 2. Open Swagger UI
+# Visit http://localhost:8000/docs in your browser
+
+# 3. Send a test request via curl
+curl -s -X POST http://localhost:8000/triage \
+  -H "Content-Type: text/plain" \
+  --data "Back-off restarting failed container payments-api in namespace production" | jq .
+
+# 4. Check the health endpoint
+curl http://localhost:8000/health
+# {"status":"ok"}
+```
 
 ---
 
@@ -68,47 +163,7 @@ knowledge_base/
 
 **Demo vs Production:** For the demo, the `knowledge_base/` folder is baked into the Docker image. In production, mount it as an external volume so runbooks can be updated without rebuilding the image. Use `-v $(pwd)/knowledge_base:/app/knowledge_base` with Docker or a ConfigMap/PersistentVolume in Kubernetes.
 
-**Empty knowledge base:** If the folder is empty, the service skips retrieval entirely and falls back to Claude's general knowledge with confidence capped at 10 and empty sources.
-
----
-
-## Docker
-
-```bash
-# Build
-docker build -t incident-triage-agent:latest .
-
-# Run
-docker run -p 8000:8000 \
-  -e ANTHROPIC_API_KEY="sk-ant-..." \
-  -v $(pwd)/knowledge_base:/app/knowledge_base \
-  incident-triage-agent:latest
-```
-
----
-
-## Kubernetes
-
-```bash
-# Create the API key secret
-kubectl create secret generic anthropic-secret \
-  --from-literal=api-key="sk-ant-..."
-
-# Load image into kind (local dev)
-kind load docker-image incident-triage-agent:latest
-
-# Deploy
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-
-# Verify
-kubectl get pods -l app=incident-triage-agent
-kubectl logs -l app=incident-triage-agent --tail=50
-
-# Forward and test
-kubectl port-forward svc/incident-triage-agent 8000:8000
-curl http://localhost:8000/health
-```
+**Empty knowledge base:** If the folder is empty, the service skips retrieval entirely and falls back to Claude's general knowledge with confidence capped at 10% and empty sources.
 
 ---
 
