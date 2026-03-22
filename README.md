@@ -16,7 +16,7 @@ incident-triage-agent accepts any error log or incident description and returns 
 2. **Chunk** — splits documents into overlapping windows for fine-grained matching
 3. **Retrieve** — scores your error log against every chunk and picks the top 3 matches
 4. **Prompt** — builds a grounded prompt from the retrieved context and the error log
-5. **Respond** — Claude returns structured JSON; if retrieval is weak, confidence is capped at 30 and a warning is appended. If the knowledge base is empty, the service skips retrieval entirely and falls back to Claude's general knowledge with confidence set to 10
+5. **Respond** — Claude returns structured JSON; if retrieval is weak, confidence is capped at 30% and a warning is appended. If the knowledge base is empty, the service skips retrieval entirely and falls back to Claude's general knowledge with confidence set to 10%
 
 ---
 
@@ -24,7 +24,7 @@ incident-triage-agent accepts any error log or incident description and returns 
 
 **Required:**
 - Python 3.11+
-- An [Anthropic API key](https://console.anthropic.com/) (or set `LLM_PROVIDER=local` to skip). Note that any LLM can be used.
+- An [Anthropic API key](https://console.anthropic.com/) (or set `LLM_PROVIDER=local` to skip). 
 
 **Required for Kubernetes deployment:**
 - Docker
@@ -41,7 +41,7 @@ cd incident-triage-agent
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-export ANTHROPIC_API_KEY="sk-ant-..."
+export ANTHROPIC_API_KEY=<your_key>
 uvicorn main:app --reload --port 8000
 ```
 
