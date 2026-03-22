@@ -133,9 +133,9 @@ kubectl port-forward svc/incident-triage-agent 8000:8000
 # Visit http://localhost:8000/docs in your browser
 
 # 3. Send a test request via curl
-curl -s -X POST http://localhost:8000/triage \
+curl -X POST http://localhost:8000/triage \
   -H "Content-Type: text/plain" \
-  --data "Back-off restarting failed container payments-api in namespace production" | jq .
+  -d "OOMKilled exit code 137 payment-processor pod restarted 4 times"
 
 # 4. Check the health endpoint
 curl http://localhost:8000/health
