@@ -205,4 +205,21 @@ curl http://localhost:8000/health
 
 ## Architecture
 
-`main.py` exposes two FastAPI routes and wires together the pipeline components. On each `/triage` request, `loader.py` reads the knowledge base from disk, `chunker.py` splits documents into overlapping windows, and `retriever.py` scores the error log against those chunks using TF-IDF cosine similarity. Before retrieval, an optional normalization step uses Claude to extract the core error signal from noisy or structured inputs — this ensures TF-IDF receives a clean query regardless of input format. The top matches are assembled into a grounded prompt by `pipeline.py`, sent to the configured LLM provider (default: Claude via `triage/providers/claude.py`), and the structured JSON response is returned to the caller. Providers implement a single `complete(prompt) -> str` interface, making it straightforward to swap in a different model.
+The service is built around a clean pipeline with separated concerns:
+
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| API layer | `main.py` | FastAPI routes, request validation, response formatting |
+| Configuration | `config.py` | Loads all settings from environment variables |
+| Pipeline | `triage/pipeline.py` | Orchestrates all steps end to end |
+| Loader | `triage/loader.py` | Reads `.md` and `.txt` files from the knowledge base |
+| Chunker | `triage/chunker.py` | Splits documents into overlapping windows |
+| Retriever | `triage/retriever.py` | TF-IDF index + cosine similarity search |
+| LLM Provider | `triage/providers/` | Abstraction layer — swap Claude for any model |
+
+**Request flow:**
+1. Raw input received → Claude normalizes it into a clean search query
+2. Loader reads KB files → Chunker splits them → Retriever finds top matches
+3. If no matches found → skip to Claude with general knowledge fallback
+4. Matched chunks assembled into grounded prompt → sent to LLM provider
+5. Structured JSON returned with summary, confidence, action items, sources
