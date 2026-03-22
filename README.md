@@ -6,7 +6,7 @@ A retrieval-augmented incident triage service. Paste any error log or incident d
 
 ## Project Overview
 
-incident-triage-agent accepts any error log or incident description and returns a JSON response with a root-cause summary, confidence score, concrete action items, and the runbook files used. It retrieves the most relevant sections from a local Markdown knowledge base before calling Claude, so answers are grounded in your own documentation. The service is stateless and domain-agnostic — the knowledge base ships with Kubernetes runbooks as a demo, but works for any system you have runbooks for.
+incident-triage-agent accepts any error log or incident description and returns a JSON response with a root-cause summary, confidence score, concrete action items, and the runbook files used. It retrieves the most relevant sections from a local knowledge base before calling Claude, so answers are grounded in your own documentation. The service is stateless and domain-agnostic — the knowledge base ships with Kubernetes runbooks as a demo, but works for any system you have runbooks for.
 
 ---
 
@@ -14,9 +14,9 @@ incident-triage-agent accepts any error log or incident description and returns 
 
 1. **Load** — scans the `knowledge_base/` folder for `.md` and `.txt` runbooks
 2. **Chunk** — splits documents into overlapping windows for fine-grained matching
-3. **Retrieve** — scores your error log against every chunk and picks the top 3 matches
+3. **Retrieve** — scores your error log against every chunk and picks the top N matches (N is configurable, equals 3 by default)
 4. **Prompt** — builds a grounded prompt from the retrieved context and the error log
-5. **Respond** — Claude returns structured JSON; if retrieval is weak, confidence is capped at 30% and a warning is appended. If the knowledge base is empty, the service skips retrieval entirely and falls back to Claude's general knowledge with confidence set to 10%
+5. **Respond** — Claude returns structured JSON (includes incident summary, confidence level, action items and relevant sources); if retrieval is weak, confidence is capped at 30% and a warning is appended. If the knowledge base is empty, the service skips retrieval entirely and falls back to Claude's general knowledge with confidence set to 10% 
 
 ---
 
@@ -146,8 +146,15 @@ curl http://localhost:8000/health
 
 ## Knowledge Base
 
-The `knowledge_base/` folder contains Markdown runbooks. The service ships with seven:
+The `knowledge_base/` folder contains Markdown runbooks.
 
+**To add your own runbooks:** drop any `.md` or `.txt` file into the folder and restart the server. No indexing step required — the service loads and indexes on startup.
+
+**Demo vs Production:** For the demo, the `knowledge_base/` folder is baked into the Docker image. In production, mount it as an external volume so runbooks can be updated without rebuilding the image. Use `-v $(pwd)/knowledge_base:/app/knowledge_base` with Docker or a ConfigMap/PersistentVolume in Kubernetes.
+
+**Empty knowledge base:** If the folder is empty, the service skips retrieval entirely and falls back to Claude's general knowledge with confidence capped at 10% and empty sources.
+
+As an example, the service ships with seven `.md` files by default (editable at any time):
 ```
 knowledge_base/
 ├── crashloopbackoff.md
@@ -158,13 +165,6 @@ knowledge_base/
 ├── probe_failures.md
 └── pending_pods.md
 ```
-
-**To add your own runbooks:** drop any `.md` or `.txt` file into the folder and restart the server. No indexing step required — the service loads and indexes on startup.
-
-**Demo vs Production:** For the demo, the `knowledge_base/` folder is baked into the Docker image. In production, mount it as an external volume so runbooks can be updated without rebuilding the image. Use `-v $(pwd)/knowledge_base:/app/knowledge_base` with Docker or a ConfigMap/PersistentVolume in Kubernetes.
-
-**Empty knowledge base:** If the folder is empty, the service skips retrieval entirely and falls back to Claude's general knowledge with confidence capped at 10% and empty sources.
-
 ---
 
 ## API Reference
